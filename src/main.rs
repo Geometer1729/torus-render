@@ -8,7 +8,6 @@ use vecmath::{ vec3_add, vec3_dot, vec3_len, vec3_normalized, vec3_scale, vec3_s
 
 use rayon::prelude::*;
 
-
 #[derive(Parser, Debug)]
 #[clap(author = "Brian Kuhns", version, about)]
 /// Application configuration
@@ -84,16 +83,15 @@ type State = (Pt,Pt);
 fn project(center : Pt2,p : Pt2) -> Pt2 {
     let [theta,phi] = center;
     let mut x =  angle_to_r3(center);
-    let r = RMAJ + f64::cos(phi) * RMIN;
-    let vdtheta = vec3_normalized(
-        [ r * f64::sin(theta)
-        , -r * f64::cos(theta)
+    let vdtheta =
+        [ f64::sin(theta)
+        , -1.0 * f64::cos(theta)
         , 0.0
-        ]);
+        ];
     let vdphi = vec3_normalized(
-        [ f64::sin(phi) * f64::cos(theta) * -RMIN
-        , f64::sin(phi) * f64::sin(theta) * -RMIN
-        , f64::cos(phi) * RMIN
+        [ f64::sin(phi) * f64::cos(theta) * -1.0
+        , f64::sin(phi) * f64::sin(theta) * -1.0
+        , f64::cos(phi)
         ]);
     let [dtheta,dphi] = p;
     let mut v = vec3_add(vec3_scale(vdtheta,dtheta),vec3_scale(vdphi,dphi));
