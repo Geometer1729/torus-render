@@ -10,6 +10,6 @@ version = "0.1.0"
 
 [dependencies]
 clap = { version = "4.3.14", features = ["derive"] }
-bmp = { version = "0.5.0" }
-vecmath = { version = "1.0.0" }
-rayon = { version = "1.10.0" }
+vecmath = "1.0.0"
+rayon = "1.10.0"
+image = "0.25.4"
