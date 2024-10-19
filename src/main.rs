@@ -1,10 +1,13 @@
+mod trig;
+mod proj;
+
 extern crate bmp;
 
 use std::f64::consts::TAU;
+use proj::project;
 
 use clap::Parser;
 use bmp::{Image, Pixel};
-use vecmath::{ vec3_add, vec3_dot, vec3_len, vec3_normalized, vec3_scale, vec3_sub, Vector2, Vector3};
 
 use rayon::prelude::*;
 
@@ -73,71 +76,3 @@ fn pixel_for(scale:f64,width : u32, height :u32, lat : f64, long : f64, source_m
     source_map.get_pixel(x3 as u32,y3 as u32)
 }
 
-const RMAJ : f64 = 90_000.0;
-const RMIN : f64 = 30_000.0;
-
-type Pt = Vector3<f64>;
-type Pt2 = Vector2<f64>;
-type State = (Pt,Pt);
-
-fn project(center : Pt2,p : Pt2) -> Pt2 {
-    let [theta,phi] = center;
-    let mut x =  angle_to_r3(center);
-    let vdtheta =
-        [ f64::sin(theta)
-        , -1.0 * f64::cos(theta)
-        , 0.0
-        ];
-    let vdphi = vec3_normalized(
-        [ f64::sin(phi) * f64::cos(theta) * -1.0
-        , f64::sin(phi) * f64::sin(theta) * -1.0
-        , f64::cos(phi)
-        ]);
-    let [dtheta,dphi] = p;
-    let mut v = vec3_add(vec3_scale(vdtheta,dtheta),vec3_scale(vdphi,dphi));
-    let l = vec3_len(v);
-    v = vec3_normalized(v);
-    if p != center {
-        for _ in 0..(l as u32) {
-            (x,v) = step((x,v));
-
-        }
-    }
-    r3_to_angular(x)
-}
-
-fn angle_to_r3(angular : Pt2 ) -> Pt {
-    let [theta,phi] = angular;
-    let r = RMAJ + f64::cos(phi) * RMIN;
-    [ r * f64::cos(theta)
-    , r * f64::sin(theta)
-    , RMIN * f64::sin(phi)
-    ]
-}
-
-fn r3_to_angular(p : Pt) -> Pt2 {
-    let [x,y,z] = p;
-    let theta = f64::atan2(y,x);
-    let phi = f64::atan2(z,f64::sqrt(x*x+y*y)-RMAJ);
-    [theta,phi]
-}
-
-fn step((x,v) : State) -> State {
-    let (x2,normal) = surface(vec3_add(x,v));
-    //println!("x2 {x2:?} normal {normal:?}");
-    let v2_1 = vec3_sub(x2,x);
-    let v2_2 = vec3_sub(v2_1,vec3_scale(normal,vec3_dot(v2_1,normal)));
-    (x2,vec3_normalized(v2_2))
-}
-
-// returns new surfaced point and normal
-fn surface(p : Pt) -> (Pt,Pt) {
-    let [x,y,_z] = p;
-    let r_horiz = f64::sqrt(x*x+y*y);
-    let center_pt = vec3_scale([x,y,0.0],RMAJ/r_horiz);
-    // closest point on the circle at the center of the torus
-    let delta = vec3_sub(p , center_pt);
-    let normal = vec3_normalized(delta);
-    let surfaced =vec3_add(center_pt,vec3_scale(delta,RMIN/vec3_len(delta)));
-    (surfaced,normal)
-}
