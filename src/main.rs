@@ -54,14 +54,25 @@ fn main() {
     let scale = args.scale.unwrap_or(1.0);
 
     let mut img = Image::new(width, height);
-    let writes : Vec<(u32,u32,Pixel)> =
+    let forward_map : Vec<(u32,u32,(f64,f64))> =
         img.coordinates()
             .collect::<Vec<_>>()
             .par_iter()
-            .map(|&(x,y)|(x,y,pixel_for(scale,width,height,lat,long,&source_map,x,y)))
+            .map(|&(x,y)|(x,y,pixel_for
+                (source_map.get_height() as f64
+                ,source_map.get_width() as f64
+                ,scale
+                ,width
+                ,height
+                ,lat
+                ,long
+                ,x
+                ,y
+            )))
             .collect();
-    for &(x,y,p) in writes.iter() {
-        img.set_pixel(x,y,p);
+    for &(x,y,(px,py)) in forward_map.iter() {
+        let pixel = source_map.get_pixel(px as u32,py as u32);
+        img.set_pixel(x,y,pixel);
     }
     let _ = img.save("img.bmp");
 
@@ -69,12 +80,21 @@ fn main() {
 
 const TARGET_STEP : f64 = 100.0;
 
-fn pixel_for(scale:f64,width : u32, height :u32, lat : f64, long : f64, source_map : &Image, x : u32,y :u32) -> Pixel {
+fn pixel_for
+    (source_h : f64
+    ,source_w : f64
+    ,scale:f64
+    ,width : u32
+    ,height :u32
+    ,lat : f64
+    ,long : f64
+    ,x : u32
+    ,y :u32) -> (f64,f64) {
     let x1 = (x as f64 - (width/2) as f64)*scale as f64;
     let y1 = (y as f64 - (height/2) as f64)*scale as f64;
     let [x2,y2] = project([long,lat],[x1,y1],TARGET_STEP);
-    let x3 = (x2 + TAU/2.0)/TAU*(source_map.get_width() as f64);
-    let y3 = (y2 + TAU/2.0)/TAU*(source_map.get_height() as f64);
-    source_map.get_pixel(x3 as u32,y3 as u32)
+    let x3 = (x2 + TAU/2.0)/TAU*source_w;
+    let y3 = (y2 + TAU/2.0)/TAU*source_h;
+    (x3,y3)
 }
 
