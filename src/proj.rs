@@ -7,10 +7,10 @@ const RMIN : f64 = 30_000.0;
 
 type Pt = Vector3<f64>;
 type Pt2 = Vector2<f64>;
-type State = (Pt,Pt);
+type State = (Pt,Pt,Pt);
 
 
-pub fn project(center : Pt2,p : Pt2) -> Pt2 {
+pub fn project(center : Pt2,p : Pt2,target_step : f64) -> Pt2 {
     let [theta,phi] = center;
     let mut x =  angle_to_r3(center);
     let vdtheta =
@@ -27,12 +27,12 @@ pub fn project(center : Pt2,p : Pt2) -> Pt2 {
     let mut v = vec3_add(vec3_scale(vdtheta,dtheta),vec3_scale(vdphi,dphi));
     let l = vec3_len(v);
     v = vec3_normalized(v);
-    let target_step = 10.0;
+    let mut a = [0.0,0.0,0.0];
     let steps = (l/target_step) as u32;
     let d : f64 = l / steps as f64;
     if p != center {
         for _ in 0..steps {
-            (x,v) = step((x,v),d);
+            (x,v,a) = step((x,v,a),d);
 
         }
     }
@@ -55,12 +55,14 @@ pub fn r3_to_angular(p : Pt) -> Pt2 {
     [theta,phi]
 }
 
-pub fn step((x,v) : State,d : f64) -> State {
-    let (x2,normal) = surface(vec3_add(x,vec3_scale(v,d)));
-    //println!("x2 {x2:?} normal {normal:?}");
+pub fn step((x,v,a) : State,d : f64) -> State {
+    // a represents a*d^2 since there's no need to normalize it or scale it up and down
+    let x2_plain = vec3_add(vec3_add(x,vec3_scale(v,d)),a);
+    let (x2,normal) = surface(x2_plain);
+    let a2 = vec3_sub(x2,x2_plain);
     let v2_1 = vec3_sub(x2,x);
     let v2_2 = vec3_sub(v2_1,vec3_scale(normal,vec3_dot(v2_1,normal)));
-    (x2,vec3_normalized(v2_2))
+    (x2,vec3_normalized(v2_2),a2)
 }
 
 // returns new surfaced point and normal

@@ -67,10 +67,12 @@ fn main() {
 
 }
 
+const TARGET_STEP : f64 = 100.0;
+
 fn pixel_for(scale:f64,width : u32, height :u32, lat : f64, long : f64, source_map : &Image, x : u32,y :u32) -> Pixel {
     let x1 = (x as f64 - (width/2) as f64)*scale as f64;
     let y1 = (y as f64 - (height/2) as f64)*scale as f64;
-    let [x2,y2] = project([long,lat],[x1,y1]);
+    let [x2,y2] = project([long,lat],[x1,y1],TARGET_STEP);
     let x3 = (x2 + TAU/2.0)/TAU*(source_map.get_width() as f64);
     let y3 = (y2 + TAU/2.0)/TAU*(source_map.get_height() as f64);
     source_map.get_pixel(x3 as u32,y3 as u32)
