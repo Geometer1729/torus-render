@@ -3,7 +3,7 @@ mod trig;
 
 extern crate image;
 
-use image::{imageops::interpolate_bilinear, open, RgbImage};
+use image::{imageops::interpolate_bilinear, open, Rgb, RgbImage, RgbaImage,Pixel};
 use proj::{project, Pt2};
 use std::{collections::HashMap, f64::consts::TAU};
 use vecmath::{vec2_dot, vec2_scale, vec2_sub};
@@ -58,12 +58,13 @@ fn main() {
     let lat = (args.lat.unwrap_or(0.0) + 90.0) * TAU / 360.0;
     let width = args.width.unwrap_or(512);
     let height = args.height.unwrap_or(512);
-    let scale = args.scale.unwrap_or(400.0);
+    let scale = args.scale.unwrap_or(100.0);
     let rev = args.rev;
-    let out = args.out.unwrap_or("map.jpg".to_string());
+    let out = args.out.unwrap_or("map.png".to_string());
 
     if rev {
-        let mut img = RgbImage::new(width, height);
+        let mut img = RgbaImage::new(width, height)
+        ;
         let mut source = source_map.clone();
         let forward_map: HashMap<[u32; 2], [f64; 2]> = source
             .par_enumerate_pixels_mut()
@@ -85,7 +86,7 @@ fn main() {
                 )
             })
             .collect();
-        let dims = [source.width() as f64, source.height() as f64];
+        let dims = [width as f64,height as f64];
         for (&[px, py], &v1) in forward_map.iter() {
             let v2 = match forward_map.get(&[px + 1, py]) {
                 Some(&v2) => v2,
@@ -100,18 +101,12 @@ fn main() {
                 }
             };
             for ((x,y),(sx,sy)) in triangle_from(v1,v2,v3,[px,py],dims) {
-                *img.get_pixel_mut(x,y) =
-                    interpolate_bilinear(&source,sx,sy).unwrap();
+                *img.get_pixel_mut(x,y) = interpolate_bilinear(&source,sx,sy).unwrap().to_rgba();
             }
-            let v4 = match forward_map.get(&[px + 1, py + 1]) {
-                Some(&v4) => v4,
-                None => {
-                    continue;
-                }
-            };
+            let &v4 = forward_map.get(&[px + 1, py + 1]).unwrap();
             for ((x,y),(sx,sy)) in triangle_from(v4,v2,v3,[px,py],dims) {
                 *img.get_pixel_mut(x,y) =
-                    interpolate_bilinear(&source,sx,sy).unwrap();
+                    interpolate_bilinear(&source,sx,sy).unwrap().to_rgba();
             }
         }
         img.save(out).unwrap();
@@ -119,8 +114,8 @@ fn main() {
         let mut img = RgbImage::new(width, height);
         img.par_enumerate_pixels_mut().for_each(|(x, y, p)| {
             let (px, py) = pixel_for(
-                source_map.height() as f64,
                 source_map.width() as f64,
+                source_map.height() as f64,
                 scale,
                 width,
                 height,
@@ -139,20 +134,11 @@ fn rot_90([x, y]: [f64; 2]) -> [f64; 2] {
     [-y, x]
 }
 
-fn t2_sub([lx, ly]: Pt2, [rx, ry]: Pt2, [w, h]: Pt2) -> Pt2 {
-    [t1_sub(lx, rx, w), t1_sub(ly, ry, h)]
-}
-
-fn t1_sub(l: f64, r: f64, d: f64) -> f64 {
-    let diff = l - r;
-    diff + (if diff > d / 2.0 { d } else { 0.0 }) + (if diff < -d / 2.0 { -d } else { 0.0 })
-}
-
 const TARGET_STEP: f64 = 100.0;
 
 fn pixel_for(
-    source_h: f64,
     source_w: f64,
+    source_h: f64,
     scale: f64,
     width: u32,
     height: u32,
@@ -207,7 +193,7 @@ fn triangle_from(
     // basis for the triangle
     let b1 = [l2[1] / det, -l2[0] / det];
     let b2 = [-l1[1] / det, l1[0] / det];
-    if (xmax - xmin) as f64 > dims[0] / 2.0 || (ymax - ymin) as f64 > dims[0] / 2.0 {
+    if (xmax - xmin) as f64 > dims[0] / 2.0 || (ymax - ymin) as f64 > dims[1] / 2.0 {
         //println!("{xmax},{xmin},{ymax},{ymin}");
         return Vec::new();
     }
