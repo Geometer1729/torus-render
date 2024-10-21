@@ -12,6 +12,3 @@ pub fn sqrt(x: f64) -> f64 {
 pub fn atan2(x: f64, y: f64) -> f64 {
     f64::atan2(x, y)
 }
-pub fn abs(x: f64) -> f64 {
-    x.abs()
-}

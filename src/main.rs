@@ -3,10 +3,10 @@ mod trig;
 
 extern crate image;
 
-use image::{imageops::interpolate_bilinear, open, Rgb, RgbImage, RgbaImage,Pixel};
+use image::{imageops::interpolate_bilinear, open, Pixel, RgbImage, RgbaImage};
 use proj::{project, Pt2};
 use std::{collections::HashMap, f64::consts::TAU};
-use vecmath::{vec2_dot, vec2_len, vec2_scale, vec2_sub};
+use vecmath::{vec2_dot, vec2_len, vec2_sub};
 
 use clap::Parser;
 
@@ -66,12 +66,12 @@ fn main() {
     let out = args.out;
 
     match args.mat {
-        None => {},
+        None => {}
         Some(path) => {
             let m = open(path).expect("failed to open").into_rgb8();
             width = m.width();
             height = m.height();
-        },
+        }
     }
 
     if rev {
@@ -97,7 +97,7 @@ fn main() {
                 )
             })
             .collect();
-        let dims = [width as f64,height as f64];
+        let dims = [width as f64, height as f64];
         for (&[px, py], &v1) in forward_map.iter() {
             let v2 = match forward_map.get(&[px + 1, py]) {
                 Some(&v2) => v2,
@@ -111,13 +111,18 @@ fn main() {
                     continue;
                 }
             };
-            for ((x,y),(sxp,syp)) in triangle_from(v1,v2,v3,dims) {
-                *img.get_pixel_mut(x,y) = interpolate_bilinear(&source,px as f32+sxp,py as f32+syp).unwrap().to_rgba();
+            for ((x, y), (sxp, syp)) in triangle_from(v1, v2, v3, dims) {
+                *img.get_pixel_mut(x, y) =
+                    interpolate_bilinear(&source, px as f32 + sxp, py as f32 + syp)
+                        .unwrap()
+                        .to_rgba();
             }
             let &v4 = forward_map.get(&[px + 1, py + 1]).unwrap();
-            for ((x,y),(sxp,syp)) in triangle_from(v4,v2,v3,dims) {
-                *img.get_pixel_mut(x,y) =
-                    interpolate_bilinear(&source,px as f32+1.0-sxp,py as f32+1.0-syp).unwrap().to_rgba();
+            for ((x, y), (sxp, syp)) in triangle_from(v4, v2, v3, dims) {
+                *img.get_pixel_mut(x, y) =
+                    interpolate_bilinear(&source, px as f32 + 1.0 - sxp, py as f32 + 1.0 - syp)
+                        .unwrap()
+                        .to_rgba();
             }
         }
         img.save(out).unwrap();
@@ -165,10 +170,10 @@ fn pixel_for(
     let mut v_last;
     loop {
         v_last = v;
-        step = step/2.0;
+        step = step / 2.0;
         v = project([long, lat], [x1, y1], step);
-        if vec2_len(vec2_sub(v,v_last)) < TOLERANCE {
-            break
+        if vec2_len(vec2_sub(v, v_last)) < TOLERANCE {
+            break;
         }
     }
     let [x2, y2] = v;
@@ -177,12 +182,7 @@ fn pixel_for(
     (x3, y3)
 }
 
-fn triangle_from(
-    v1: Pt2,
-    v2_: Pt2,
-    v3_: Pt2,
-    dims: Pt2,
-) -> Vec<((u32, u32), (f32, f32))> {
+fn triangle_from(v1: Pt2, v2_: Pt2, v3_: Pt2, dims: Pt2) -> Vec<((u32, u32), (f32, f32))> {
     let mut v2 = v2_;
     let mut v3 = v3_;
     let mut l1 = vec2_sub(v2, v1);
@@ -230,11 +230,11 @@ fn triangle_from(
                 // relative coords in the triangle
                 let pxp = vec2_dot(vr, b1) as f32;
                 let pyp = vec2_dot(vr, b2) as f32;
-                if pyp < 0.0  {
+                if pyp < 0.0 {
                     println!("{pyp}");
                 }
-                let pt = if fliped { (pyp,pxp) } else { (pxp,pyp) };
-                ret.push(((x, y),pt));
+                let pt = if fliped { (pyp, pxp) } else { (pxp, pyp) };
+                ret.push(((x, y), pt));
             }
         }
     }
