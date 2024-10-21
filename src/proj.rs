@@ -38,12 +38,12 @@ pub fn project(center: Pt2, p: Pt2, target_step: f64) -> Pt2 {
 pub fn angle_to_r3(angular: Pt2) -> Pt {
     let [theta, phi] = angular;
     let r = RMAJ + cos(phi) * RMIN;
-    [r * cos(theta), r * sin(theta), RMIN * sin(phi)]
+    [r * sin(theta), r * cos(theta), RMIN * sin(phi)]
 }
 
 pub fn r3_to_angular(p: Pt) -> Pt2 {
     let [x, y, z] = p;
-    let theta = atan2(y, x);
+    let theta = atan2(x, y);
     let phi = atan2(z, sqrt(x * x + y * y) - RMAJ);
     [theta, phi]
 }
