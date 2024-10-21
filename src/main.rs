@@ -11,6 +11,7 @@ use vecmath::{vec2_dot, vec2_len, vec2_sub};
 use clap::Parser;
 
 use rayon::prelude::*;
+//use rayon::collections::hash_map::Iter;
 
 #[derive(Parser, Debug)]
 #[clap(author = "Brian Kuhns", version, about)]
@@ -98,33 +99,48 @@ fn main() {
             })
             .collect();
         let dims = [width as f64, height as f64];
-        for (&[px, py], &v1) in forward_map.iter() {
-            let v2 = match forward_map.get(&[px + 1, py]) {
-                Some(&v2) => v2,
-                None => {
-                    continue;
+        forward_map
+            .par_iter()
+            .map(|(&[px, py], &v1)| {
+                let mut writes: Vec<((u32, u32), _)> = Vec::new();
+                let v2 = match forward_map.get(&[px + 1, py]) {
+                    Some(&v2) => v2,
+                    None => {
+                        return writes;
+                    }
+                };
+                let v3 = match forward_map.get(&[px, py + 1]) {
+                    Some(&v3) => v3,
+                    None => {
+                        return writes;
+                    }
+                };
+                for ((x, y), (sxp, syp)) in triangle_from(v1, v2, v3, dims) {
+                    writes.push((
+                        (x, y),
+                        interpolate_bilinear(&source, px as f32 + sxp, py as f32 + syp)
+                            .unwrap()
+                            .to_rgba(),
+                    ));
                 }
-            };
-            let v3 = match forward_map.get(&[px, py + 1]) {
-                Some(&v3) => v3,
-                None => {
-                    continue;
+                let &v4 = forward_map.get(&[px + 1, py + 1]).unwrap();
+                for ((x, y), (sxp, syp)) in triangle_from(v4, v2, v3, dims) {
+                    writes.push((
+                        (x, y),
+                        interpolate_bilinear(&source, px as f32 + 1.0 - sxp, py as f32 + 1.0 - syp)
+                            .unwrap()
+                            .to_rgba(),
+                    ));
                 }
-            };
-            for ((x, y), (sxp, syp)) in triangle_from(v1, v2, v3, dims) {
-                *img.get_pixel_mut(x, y) =
-                    interpolate_bilinear(&source, px as f32 + sxp, py as f32 + syp)
-                        .unwrap()
-                        .to_rgba();
-            }
-            let &v4 = forward_map.get(&[px + 1, py + 1]).unwrap();
-            for ((x, y), (sxp, syp)) in triangle_from(v4, v2, v3, dims) {
-                *img.get_pixel_mut(x, y) =
-                    interpolate_bilinear(&source, px as f32 + 1.0 - sxp, py as f32 + 1.0 - syp)
-                        .unwrap()
-                        .to_rgba();
-            }
-        }
+                return writes;
+            })
+            .collect_vec_list()
+            .iter()
+            .for_each(|writes| {
+                for ((x, y), pixel) in writes.concat() {
+                    *img.get_pixel_mut(x, y) = pixel;
+                }
+            });
         img.save(out).unwrap();
     } else {
         let mut img = RgbImage::new(width, height);
