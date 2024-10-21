@@ -84,11 +84,9 @@ fn main() {
                 (
                     [x, y],
                     pixel_for(
-                        width as f64,
-                        height as f64,
+                        [width as f64, height as f64],
+                        [source_map.width(), source_map.height()],
                         scale,
-                        source_map.width(),
-                        source_map.height(),
                         lat,
                         long,
                         x,
@@ -132,7 +130,7 @@ fn main() {
                             .to_rgba(),
                     ));
                 }
-                return writes;
+                writes
             })
             .collect_vec_list()
             .iter()
@@ -146,11 +144,9 @@ fn main() {
         let mut img = RgbImage::new(width, height);
         img.par_enumerate_pixels_mut().for_each(|(x, y, p)| {
             let (px, py) = pixel_for(
-                source_map.width() as f64,
-                source_map.height() as f64,
+                [source_map.width() as f64, source_map.height() as f64],
+                [width, height],
                 scale,
-                width,
-                height,
                 lat,
                 long,
                 x,
@@ -169,24 +165,22 @@ fn rot_90([x, y]: [f64; 2]) -> [f64; 2] {
 const TOLERANCE: f64 = 1.0;
 
 fn pixel_for(
-    source_w: f64,
-    source_h: f64,
+    [source_w, source_h]: [f64; 2],
+    [out_w, out_h]: [u32; 2],
     scale: f64,
-    width: u32,
-    height: u32,
     lat: f64,
     long: f64,
     x: u32,
     y: u32,
 ) -> (f64, f64) {
-    let x1 = (x as f64 - (width / 2) as f64) * scale as f64;
-    let y1 = (y as f64 - (height / 2) as f64) * scale as f64;
+    let x1 = (x as f64 - (out_w / 2) as f64) * scale;
+    let y1 = (y as f64 - (out_h / 2) as f64) * scale;
     let mut step = 100.0;
     let mut v = project([long, lat], [x1, y1], step);
     let mut v_last;
     loop {
         v_last = v;
-        step = step / 2.0;
+        step /= 2.0;
         v = project([long, lat], [x1, y1], step);
         if vec2_len(vec2_sub(v, v_last)) < TOLERANCE {
             break;
@@ -208,12 +202,8 @@ fn triangle_from(v1: Pt2, v2_: Pt2, v3_: Pt2, dims: Pt2) -> Vec<((u32, u32), (f3
     let mut det = l1[0] * l2[1] - l2[0] * l1[1];
     let fliped = det < 0.0;
     if fliped {
-        let vtemp = v2;
-        v2 = v3;
-        v3 = vtemp;
-        let ltemp = l1;
-        l1 = l2;
-        l2 = ltemp;
+        std::mem::swap(&mut v2, &mut v3);
+        std::mem::swap(&mut l1, &mut l2);
         det = -det;
     }
 
@@ -285,13 +275,13 @@ fn triangle_from(v1: Pt2, v2_: Pt2, v3_: Pt2, dims: Pt2) -> Vec<((u32, u32), (f3
             }
         }
     }
-    return ret;
+    ret
 }
 
 fn split_t(x: f64, d: f64) -> (f64, f64) {
     if x > d / 2.0 {
         (0.0, x)
     } else {
-        (x, d-1.0)
+        (x, d - 1.0)
     }
 }

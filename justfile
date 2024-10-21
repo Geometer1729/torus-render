@@ -12,3 +12,6 @@ run *ARGS:
 # Run 'cargo watch' to run the project (auto-recompiles)
 watch *ARGS:
     cargo watch -x "run -- {{ARGS}}"
+
+lint:
+  cargo clippy --release -p torus-renderer --all-targets --all-features -- --deny warnings
