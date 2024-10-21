@@ -231,12 +231,43 @@ fn triangle_from(v1: Pt2, v2_: Pt2, v3_: Pt2, dims: Pt2) -> Vec<((u32, u32), (f3
     // basis for the triangle
     let b1 = [l2[1] / det, -l2[0] / det];
     let b2 = [-l1[1] / det, l1[0] / det];
-    if (xmax - xmin) as f64 > dims[0] / 2.0 || (ymax - ymin) as f64 > dims[1] / 2.0 {
-        //TODO handle edges somewhat reasonably
-        //println!("{xmax},{xmin},{ymax},{ymin}");
-        return Vec::new();
-    }
     let mut ret = Vec::new();
+    if (xmax - xmin) as f64 > dims[0] / 2.0 || (ymax - ymin) as f64 > dims[1] / 2.0 {
+        if (xmax - xmin) as f64 > dims[0] / 2.0 {
+            let (x1l, x1h) = split_t(v1[0], dims[0]);
+            let (x2l, x2h) = split_t(v2[0], dims[0]);
+            let (x3l, x3h) = split_t(v3[0], dims[0]);
+            ret.append(&mut triangle_from(
+                [x1l, v1[1]],
+                [x2l, v2[1]],
+                [x3l, v3[1]],
+                dims,
+            ));
+            ret.append(&mut triangle_from(
+                [x1h, v1[1]],
+                [x2h, v2[1]],
+                [x3h, v3[1]],
+                dims,
+            ));
+        } else {
+            let (y1l, y1h) = split_t(v1[1], dims[1]);
+            let (y2l, y2h) = split_t(v2[1], dims[1]);
+            let (y3l, y3h) = split_t(v3[1], dims[1]);
+            ret.append(&mut triangle_from(
+                [v1[0], y1l],
+                [v2[0], y2l],
+                [v3[0], y3l],
+                dims,
+            ));
+            ret.append(&mut triangle_from(
+                [v1[0], y1h],
+                [v2[0], y2h],
+                [v3[0], y3h],
+                dims,
+            ));
+        }
+        return ret;
+    }
     // TODO break early on these loops when trivial
     for x in xmin..=xmax {
         for y in ymin..=ymax {
@@ -255,4 +286,12 @@ fn triangle_from(v1: Pt2, v2_: Pt2, v3_: Pt2, dims: Pt2) -> Vec<((u32, u32), (f3
         }
     }
     return ret;
+}
+
+fn split_t(x: f64, d: f64) -> (f64, f64) {
+    if x > d / 2.0 {
+        (0.0, x)
+    } else {
+        (x, d-1.0)
+    }
 }
