@@ -15,3 +15,6 @@ watch *ARGS:
 
 lint:
   cargo clippy --release -p torus-renderer --all-targets --all-features -- --deny warnings
+
+bundle:
+  nix bundle --bundler github:NixOS/bundlers#toDEB .#default
