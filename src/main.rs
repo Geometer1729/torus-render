@@ -43,8 +43,8 @@ struct Args {
     #[arg(long = "out", short = 'o')]
     out: String,
 
-    #[arg(long = "match", short = 'm')]
-    mat: Option<String>,
+    #[arg(long = "layer", short = 'l')]
+    layer: Option<String>,
 
     #[arg(long = "reverse", short = 'r')]
     rev: bool,
@@ -60,19 +60,24 @@ fn main() {
     let source_map = open(input).expect("failed to open").into_rgb8();
     let long = args.long.unwrap_or(0.0) * TAU / 360.0;
     let lat = (args.lat.unwrap_or(0.0) + 90.0) * TAU / 360.0;
-    let mut width = args.width.unwrap_or(1024);
-    let mut height = args.height.unwrap_or(1024);
     let scale = args.scale.unwrap_or(100.0);
     let rev = args.rev;
     let out = args.out;
-
-    match args.mat {
-        None => {}
+    let width;
+    let height;
+    match args.layer {
         Some(path) => {
             let m = open(path).expect("failed to open").into_rgb8();
             width = m.width();
             height = m.height();
-        }
+            if args.width.is_some() || args.height.is_some() {
+                panic!("overspecified output size: --layer excludes --height and --width")
+            }
+        },
+        None => {
+            width = args.width.unwrap_or(1024);
+            height = args.height.unwrap_or(1024);
+        },
     }
 
     if rev {
@@ -200,11 +205,10 @@ fn triangle_from(v1_: Pt2, v2_: Pt2, v3_: Pt2, dims: Pt2) -> Vec<((u32, u32), (f
     let mut xmin = f64::min(v1[0], f64::min(v2[0], v3[0])).round() as u32;
     let mut ymax = f64::max(v1[1], f64::max(v2[1], v3[1])).round() as u32;
     let mut ymin = f64::min(v1[1], f64::min(v2[1], v3[1])).round() as u32;
-    let wraps = (xmax - xmin) as f64 > dims[0] / 2.0 || (ymax - ymin) as f64 > dims[1] / 2.0;
-    if wraps {
-        slide_up(&mut v1,dims);
-        slide_up(&mut v2,dims);
-        slide_up(&mut v3,dims);
+    if (xmax - xmin) as f64 > dims[0] / 2.0 || (ymax - ymin) as f64 > dims[1] / 2.0 {
+        slide_up(&mut v1, dims);
+        slide_up(&mut v2, dims);
+        slide_up(&mut v3, dims);
         xmax = f64::max(v1[0], f64::max(v2[0], v3[0])).round() as u32;
         xmin = f64::min(v1[0], f64::min(v2[0], v3[0])).round() as u32;
         ymax = f64::max(v1[1], f64::max(v2[1], v3[1])).round() as u32;
@@ -222,6 +226,9 @@ fn triangle_from(v1_: Pt2, v2_: Pt2, v3_: Pt2, dims: Pt2) -> Vec<((u32, u32), (f
         det = -det;
     }
 
+    // TODO replace this part with a seperate function
+    // make vs ls and (x|y)(min|max) arrays
+
     // normals and the dot product for each side
     let nv1 = rot_90(vec2_sub(v2, v1));
     let nvt1 = vec2_dot(v1, nv1);
@@ -237,7 +244,7 @@ fn triangle_from(v1_: Pt2, v2_: Pt2, v3_: Pt2, dims: Pt2) -> Vec<((u32, u32), (f
 
     for x in xmin..=xmax {
         for y in ymin..=ymax {
-            let v = [x as f64,y as f64];
+            let v = [x as f64, y as f64];
             if vec2_dot(v, nv1) >= nvt1 && vec2_dot(v, nv2) >= nvt2 && vec2_dot(v, nv3) >= nvt3 {
                 let vr = vec2_sub(v, v1);
                 // relative coords in the triangle
@@ -251,8 +258,10 @@ fn triangle_from(v1_: Pt2, v2_: Pt2, v3_: Pt2, dims: Pt2) -> Vec<((u32, u32), (f
     ret
 }
 
-fn slide_up(v : &mut Pt2, dims : [f64;2]){
+fn slide_up(v: &mut Pt2, dims: [f64; 2]) {
     for i in 0..2 {
-        v[i] = if v[i] < dims[i]/2.0 { v[i] + dims[i]} else {v[i]}
+        if v[i] < dims[i] / 2.0 {
+            v[i] += dims[i];
+        }
     }
 }
