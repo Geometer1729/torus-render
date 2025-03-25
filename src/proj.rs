@@ -4,8 +4,8 @@ use vecmath::{
     vec3_add, vec3_dot, vec3_len, vec3_normalized, vec3_scale, vec3_sub, Vector2, Vector3,
 };
 
-const RMAJ: f64 = 90_000.0;
-const RMIN: f64 = 30_000.0;
+pub const RMAJ: f64 = 90_000.0;
+pub const RMIN: f64 = 30_000.0;
 
 pub type Pt = Vector3<f64>;
 pub type Pt2 = Vector2<f64>;

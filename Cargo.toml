@@ -8,6 +8,14 @@ version = "0.1.0"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[[bin]]
+name = "map"
+path = "src/main.rs"
+
+[[bin]]
+name = "angle"
+path = "src/angle.rs"
+
 [dependencies]
 clap = { version = "4.3.14", features = ["derive"] }
 vecmath = "1.0.0"

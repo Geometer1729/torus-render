@@ -21,7 +21,6 @@ struct Args {
     #[arg(short = 'v')]
     verbose: bool,
 
-    /// an optional name to greet
     #[arg(long = "lat")]
     lat: Option<f64>,
 
